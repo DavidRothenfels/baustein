@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        connect-src 'self' https://api.tenderfuchs.de https://pocketbase.tenderfuchs.de;
+        img-src 'self' data:;
+        frame-src 'none';
+        object-src 'none';
+    ">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vergabebausteine Generator</title>
+    <!-- jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007bff; /* Professional Blue */
+            --secondary-color: #17a2b8; /* Info Teal/Cyan */
+            --accent-color: #28a745;  /* Success Green */
+            --background-light: #f8f9fa;
+            --background-dark: #343a40;
+            --text-light: #212529;
+            --text-dark: #f8f9fa;
+            --border-color: #dee2e6;
+            --input-bg: #fff;
+            --input-border: #ced4da;
+            --input-focus-border: #80bdff;
+            --input-focus-shadow: 0 0 0 .2rem rgba(0, 123, 255, .25);
+            --error-color: #dc3545; /* Bootstrap Danger Red */
+            --shadow-sm: 0 .125rem .25rem rgba(0, 0, 0, .075);
+            --shadow-md: 0 .5rem 1rem rgba(0, 0, 0, .15);
+            --border-radius: 0.3rem;
+            --font-family: 'Montserrat', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-light);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px 40px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            width: 100%;
+            max-width: 800px; /* Slightly wider for better form layout */
+            text-align: center;
+            border-top: 5px solid var(--primary-color);
+        }
+
+        h1, h2 {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+        }
+         h1 {
+            font-size: 2.2em;
+             margin-bottom: 15px;
+         }
+
+        h2 {
+             color: var(--secondary-color);
+             margin-top: 35px;
+             margin-bottom: 20px;
+             font-size: 1.8em;
+        }
+
+        /* View Sections */
+        .view {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+            text-align: left; /* Default align content left */
+        }
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Elements */
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-light);
+            text-align: left;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 18px;
+            border: 1px solid var(--input-border);
+            border-radius: var(--border-radius);
+            background-color: var(--input-bg);
+            color: var(--text-light);
+            font-family: var(--font-family);
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
+
+         input[type="text"]:focus,
+         input[type="password"]:focus,
+         textarea:focus,
+         select:focus {
+            outline: none;
+            border-color: var(--input-focus-border);
+            box-shadow: var(--input-focus-shadow);
+         }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+         /* Style for invalid textarea */
+         textarea.is-invalid {
+            border-color: var(--error-color);
+         }
+         textarea.is-invalid:focus {
+            border-color: var(--error-color);
+            box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .25); /* Red shadow */
+         }
+
+
+        button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 10px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-family: var(--font-family);
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            margin-top: 10px;
+            margin-right: 10px;
+             box-shadow: var(--shadow-sm);
+        }
+        button:last-child {
+            margin-right: 0;
+        }
+
+        button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+            transform: translateY(-1px);
+        }
+        button:active {
+             transform: translateY(0px);
+             background-color: #004085; /* Even darker when pressed */
+        }
+         button:disabled {
+            background-color: #6c757d; /* Grey when disabled */
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+         }
+
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        button.secondary:hover {
+            background-color: #138496; /* Darker teal */
+        }
+        button.secondary:active {
+            background-color: #117a8b;
+        }
+        button.success {
+            background-color: var(--accent-color);
+        }
+        button.success:hover {
+             background-color: #218838; /* Darker green */
+        }
+         button.success:active {
+            background-color: #1e7e34;
+         }
+
+
+        /* All Questions Form */
+         #all-questions-form .question-block {
+             background-color: #f8f9fa;
+             border: 1px solid var(--border-color);
+             border-radius: var(--border-radius);
+             padding: 20px;
+             margin-bottom: 20px;
+             box-shadow: var(--shadow-sm);
+         }
+         #all-questions-form label { /* Style question text */
+             font-weight: 600;
+             color: var(--primary-color);
+             font-size: 1.1em;
+             margin-bottom: 10px;
+         }
+         #all-questions-form textarea {
+             min-height: 80px; /* Slightly smaller default */
+             margin-bottom: 0; /* Remove margin below textarea inside block */
+         }
+
+        /* Summary & Description */
+        #summary-content, #description-content {
+            text-align: left;
+            background-color: #f8f9fa; /* Light background */
+            padding: 25px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 100px;
+            font-size: 0.95rem;
+        }
+        #summary-content ul {
+            list-style: none;
+            padding: 0;
+        }
+         #summary-content li {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+             border-bottom: 1px dashed var(--border-color);
+         }
+          #summary-content li:last-child {
+              border-bottom: none;
+              margin-bottom: 0;
+              padding-bottom: 0;
+          }
+         #summary-content li strong.question-title { /* Style the "Frage X:" part */
+             color: var(--primary-color);
+             font-weight: 600;
+             display: block; /* Make it block for spacing */
+             margin-bottom: 5px;
+         }
+         #summary-content li span.answer-text {
+            display: block;
+            margin-left: 10px; /* Indent answer slightly */
+            color: #495057; /* Darker grey for answer text */
+         }
+
+        /* Loading and Error */
+        #loading-indicator {
+            display: none;
+            margin: 30px auto;
+            border: 5px solid #e9ecef; /* Light grey border */
+            border-top: 5px solid var(--primary-color); /* Blue spinner */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #error-message {
+            display: none;
+            color: #721c24; /* Dark red text */
+            background-color: #f8d7da; /* Light red background */
+            border: 1px solid #f5c6cb; /* Red border */
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            word-wrap: break-word;
+            text-align: left;
+        }
+
+        /* Helper class */
+        .text-center {
+             text-align: center;
+        }
+        .mt-20 { margin-top: 20px; }
+        .mt-30 { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vergabebausteine Generator</h1>
+
+        <!-- 0. Loading Indicator -->
+        <div id="loading-indicator"></div>
+        <div id="error-message"></div>
+
+        <!-- 1. Login View -->
+        <div id="login-view" class="view active">
+            <h2>Login</h2>
+            <form id="login-form">
+                <label for="username">Benutzername:</label>
+                <input type="text" id="username" value="testuser" required>
+
+                <label for="password">Passwort:</label>
+                <input type="password" id="password" value="testpass" required>
+
+                <div class="text-center mt-20">
+                    <button type="submit">Login</button>
+                </div>
+                 <p style="font-size: 0.9em; margin-top: 15px; text-align: center; color: #6c757d;">(Test-Login: testuser / testpass)</p>
+            </form>
+            <div class="text-center mt-20">
+                <button id="anon-login-btn" class="secondary">Anonym Fortfahren</button>
+            </div>
+        </div>
+
+        <!-- 2. Initial Input View -->
+        <div id="input-view" class="view">
+            <h2>Projekt Details</h2>
+            <form id="initial-input-form">
+                <label for="description">Projektbeschreibung:</label>
+                <textarea id="description" rows="4" required placeholder="Beschreiben Sie kurz Ihr Projekt oder Ihren Bedarf..."></textarea>
+
+                <label for="procurement-type">Beschaffungstyp:</label>
+                <input type="text" id="procurement-type" required placeholder="z.B. IT-Dienstleistung, Hardware, Bauleistung...">
+
+                <div id="anon-api-key-section" style="display: none;" class="mt-20">
+                     <label for="openrouter-key">OpenRouter API Key <span style="color:var(--error-color);">(Notwendig für Anonyme Nutzer)</span>:</label>
+                    <input type="password" id="openrouter-key" placeholder="or-**************">
+                    <p style="font-size: 0.9em; margin-top: -10px; margin-bottom: 15px; color: #6c757d;">
+                        Wird für die KI-Generierung benötigt. <a href="https://openrouter.ai/keys" target="_blank" style="color: var(--primary-color);">Hier erstellen</a>.
+                        Bitte <strong style="color:var(--error-color)">Ausgabenlimit</strong> in OpenRouter konfigurieren!
+                    </p>
+                </div>
+
+                <div class="text-center mt-30">
+                    <button type="submit" class="success">Analyse Starten & Fragen generieren</button>
+                 </div>
+            </form>
+        </div>
+
+        <!-- 3. Q&A View (All Questions) -->
+        <div id="qa-view" class="view">
+            <h2>Bedarfsanalyse Fragen</h2>
+            <p style="color: #6c757d; margin-bottom: 25px;">Bitte beantworten Sie die folgenden Fragen so detailliert wie möglich.</p>
+            <!-- Form to hold all questions -->
+            <form id="all-questions-form">
+                <!-- Questions will be dynamically inserted here -->
+            </form>
+            <div class="text-center mt-30">
+                <button id="submit-all-answers-btn" type="button" class="success">Zusammenfassung & Beschreibung erstellen</button>
+            </div>
+        </div>
+
+        <!-- 4. Summary View -->
+        <div id="summary-view" class="view">
+            <h2>Zusammenfassung Ihrer Antworten</h2>
+            <div id="summary-content">
+                <!-- Summary will be populated here -->
+            </div>
+            <div class="text-center mt-30">
+                <button id="generate-description-btn" class="success">Bedarfsbeschreibung Generieren</button>
+                <button id="download-summary-pdf-btn" class="secondary">Zusammenfassung als PDF</button>
+                <button id="restart-btn-summary" type="button" class="secondary">Neu Starten</button>
+             </div>
+        </div>
+
+        <!-- 5. Description View -->
+        <div id="description-view" class="view">
+            <h2>Generierte Bedarfsbeschreibung</h2>
+            <div id="description-content">
+                <!-- Generated description will be populated here -->
+            </div>
+             <div class="text-center mt-30">
+                <button id="download-description-pdf-btn" class="success">Beschreibung als PDF</button>
+                <button id="restart-btn-description" type="button" class="secondary">Neu Starten</button>
+             </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const VITE_POCKETBASE_URL = "https://pocketbase.tenderfuchs.de"; // For potential PocketBase auth
+        const FASTAPI_BASE_URL = "https://api.tenderfuchs.de/api/";
+        const { jsPDF } = window.jspdf;
+
+        // --- State Variables ---
+        let state = {
+            isLoggedIn: false,
+            isAnonymous: false,
+            authToken: null,
+            description: "",
+            procurementType: "",
+            openRouterApiKey: null,
+            questions: [], // Stores the full question objects received from API
+            answers: [],   // Stores the user's answers (populated when submitting Q&A)
+            generatedDescription: "",
+            currentView: 'login'
+        };
+
+        // --- DOM Elements ---
+        const views = {
+            login: document.getElementById('login-view'),
+            input: document.getElementById('input-view'),
+            qa: document.getElementById('qa-view'),
+            summary: document.getElementById('summary-view'),
+            description: document.getElementById('description-view'),
+        };
+        const loginForm = document.getElementById('login-form');
+        const anonLoginBtn = document.getElementById('anon-login-btn');
+        const initialInputForm = document.getElementById('initial-input-form');
+        const descriptionInput = document.getElementById('description');
+        const procurementTypeInput = document.getElementById('procurement-type');
+        const openRouterKeyInput = document.getElementById('openrouter-key');
+        const anonApiKeySection = document.getElementById('anon-api-key-section');
+        const allQuestionsForm = document.getElementById('all-questions-form'); // Container for all Q&A blocks
+        const submitAllAnswersBtn = document.getElementById('submit-all-answers-btn');
+        const summaryContent = document.getElementById('summary-content');
+        const generateDescriptionBtn = document.getElementById('generate-description-btn');
+        const downloadSummaryPdfBtn = document.getElementById('download-summary-pdf-btn');
+        const descriptionContent = document.getElementById('description-content');
+        const downloadDescriptionPdfBtn = document.getElementById('download-description-pdf-btn');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const errorMessage = document.getElementById('error-message');
+        const restartBtnSummary = document.getElementById('restart-btn-summary');
+        const restartBtnDescription = document.getElementById('restart-btn-description');
+
+
+        // --- Utility Functions ---
+        function showView(viewId) {
+            Object.values(views).forEach(view => view.classList.remove('active'));
+            if (views[viewId]) {
+                views[viewId].classList.add('active');
+                state.currentView = viewId;
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function showLoading() {
+            loadingIndicator.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        function hideLoading() {
+            loadingIndicator.style.display = 'none';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = `Fehler: ${message}`;
+            errorMessage.style.display = 'block';
+            hideLoading();
+            // Scroll to error message for visibility
+            errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideError() {
+             errorMessage.style.display = 'none';
+             errorMessage.textContent = '';
+        }
+
+        function resetState() {
+             state = {
+                isLoggedIn: false,
+                isAnonymous: false,
+                authToken: null,
+                description: "",
+                procurementType: "",
+                openRouterApiKey: null,
+                questions: [],
+                answers: [],
+                generatedDescription: "",
+                currentView: 'login'
+            };
+            descriptionInput.value = '';
+            procurementTypeInput.value = '';
+            openRouterKeyInput.value = '';
+            allQuestionsForm.innerHTML = ''; // Clear dynamically added questions
+            summaryContent.innerHTML = '';
+            descriptionContent.textContent = '';
+            anonApiKeySection.style.display = 'none';
+            hideError();
+            hideLoading();
+        }
+
+        function restartApp() {
+            resetState();
+            document.getElementById('username').value = 'testuser';
+            document.getElementById('password').value = 'testpass';
+            showView('login');
+        }
+
+        // --- API Call Function (Unchanged) ---
+        async function makeApiCall(endpoint, method = 'POST', body = null) {
+            hideError();
+            showLoading();
+            const url = `${FASTAPI_BASE_URL}${endpoint}`;
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            };
+            let requestBody = body ? { ...body } : {};
+
+            if (state.isLoggedIn && state.authToken) {
+                headers['Authorization'] = `Bearer ${state.authToken}`;
+            }
+            if (state.isAnonymous && state.openRouterApiKey) {
+                 requestBody.openrouter_api_key = state.openRouterApiKey;
+            }
+
+            const options = {
+                method: method,
+                headers: headers,
+            };
+            // Only add body if method requires it and body is not empty
+            if (method !== 'GET' && method !== 'HEAD' && requestBody && Object.keys(requestBody).length > 0) {
+                options.body = JSON.stringify(requestBody);
+            }
+
+            console.log("Making API Call:", { url, method, headers: {...headers, Authorization: headers.Authorization ? 'Bearer ***' : undefined}, body: requestBody });
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json(); console.error("API Error Response Body:", errorData);
+                    } catch (e) {
+                        errorData = { message: response.statusText }; console.error("API Error Response Text:", await response.text());
+                    }
+                    const errorDetail = errorData.detail?.[0]?.msg || errorData.detail || errorData.message || `HTTP Error ${response.status}`;
+                    throw new Error(errorDetail);
+                }
+                const contentType = response.headers.get("content-type");
+                let data;
+                const responseText = await response.text();
+                if (responseText.length > 0 && contentType && contentType.includes("application/json")) {
+                    try { data = JSON.parse(responseText); } catch (e) { console.error("Failed to parse JSON response:", responseText, e); throw new Error("Ungültige JSON-Antwort vom Server erhalten."); }
+                } else if (responseText.length > 0) {
+                     data = responseText; console.log("API returned non-JSON string:", data);
+                     // Attempt to parse if it looks like JSON string
+                     try { data = JSON.parse(data); } catch (e) { /* Keep as string */ }
+                } else { data = {}; console.log("API returned empty response."); }
+                hideLoading();
+                return data;
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                showError(error.message || 'Netzwerkfehler oder Server nicht erreichbar.');
+                hideLoading();
+                return null;
+            }
+        }
+
+        // --- Application Logic ---
+
+        function handleLogin(event) {
+            event.preventDefault();
+            hideError();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            // --- !!! Replace with PocketBase SDK Login if needed !!! ---
+            if (username === 'testuser' && password === 'testpass') {
+                state.isLoggedIn = true;
+                state.isAnonymous = false;
+                state.authToken = 'dummy-test-token';
+                state.openRouterApiKey = null;
+                console.log('Login successful (Test)');
+                anonApiKeySection.style.display = 'none';
+                showView('input');
+            } else { showError('Ungültige Anmeldedaten.'); }
+        }
+
+        function handleAnonLogin() {
+             hideError();
+             state.isLoggedIn = false;
+             state.isAnonymous = true;
+             state.authToken = null;
+             console.log('Proceeding anonymously');
+             anonApiKeySection.style.display = 'block';
+             showView('input');
+        }
+
+        async function handleStartAnalysis(event) {
+            event.preventDefault();
+            hideError();
+            state.description = descriptionInput.value.trim();
+            state.procurementType = procurementTypeInput.value.trim();
+            state.openRouterApiKey = openRouterKeyInput.value.trim() || null;
+
+            if (!state.description || !state.procurementType) {
+                showError('Bitte geben Sie eine Projektbeschreibung und einen Beschaffungstyp an.');
+                return;
+            }
+             if (state.isAnonymous && !state.openRouterApiKey) {
+                showError('Als anonymer Nutzer müssen Sie einen OpenRouter API Key angeben.');
+                openRouterKeyInput.focus();
+                return;
+            }
+
+            const requestBody = {
+                description: state.description,
+                procurement_type: state.procurementType,
+            };
+
+            const data = await makeApiCall('analysis/generate-questions', 'POST', requestBody);
+
+             // --- Handle response and display all questions ---
+             let receivedQuestions = null;
+             if (data && Array.isArray(data)) { receivedQuestions = data; }
+             else if (data && data.questions && Array.isArray(data.questions)) { receivedQuestions = data.questions; }
+              else if (data && typeof data === 'object' && data.text) { // Handle single question object case
+                 receivedQuestions = [data];
+              }
+             else if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                 console.warn("Unexpected response format for questions, trying to adapt:", data);
+                 // Add more checks if needed based on actual API behavior
+                 const keyWithArray = Object.keys(data).find(k => Array.isArray(data[k]));
+                 if (keyWithArray) { receivedQuestions = data[keyWithArray]; }
+                 else { showError('Unerwartetes Datenformat für Fragen vom Server erhalten.'); }
+             } else if (data) {
+                  console.error("Failed to parse questions from API response:", data);
+                  showError('Fragen konnten nicht erfolgreich vom Server geladen werden.');
+             }
+
+             if (receivedQuestions && receivedQuestions.length > 0) {
+                state.questions = receivedQuestions; // Store questions in state
+                displayAllQuestions(state.questions); // Display them in the form
+                showView('qa'); // Switch to the Q&A view
+            } else if (receivedQuestions) {
+                 showError("Der Server hat keine Fragen für diese Eingabe generiert.");
+            }
+             // If null, error already shown
+        }
+
+        // --- NEW: Function to display all questions in the form ---
+        function displayAllQuestions(questions) {
+            allQuestionsForm.innerHTML = ''; // Clear previous questions
+            questions.forEach((question, index) => {
+                const questionBlock = document.createElement('div');
+                questionBlock.className = 'question-block';
+
+                const label = document.createElement('label');
+                // Use question.id if available and unique, otherwise index
+                const inputId = `answer-${question.id || index}`;
+                label.htmlFor = inputId;
+                label.textContent = `Frage ${index + 1}: ${question.text || question.question || 'Unbekannte Frage'}`;
+
+                const textarea = document.createElement('textarea');
+                textarea.id = inputId;
+                textarea.required = true; // Make answering mandatory? Adjust if needed
+                textarea.rows = 3; // Default rows
+                textarea.placeholder = "Ihre Antwort...";
+                textarea.setAttribute('data-question-index', index); // Store index for later retrieval
+
+                questionBlock.appendChild(label);
+                questionBlock.appendChild(textarea);
+                allQuestionsForm.appendChild(questionBlock);
+            });
+        }
+
+        // --- CORRECTED: Function to handle submission of all answers ---
+        function handleSubmitAllAnswers() {
+            hideError();
+            state.answers = []; // Clear previous answers before collecting new ones
+            let allValid = true;
+
+            // Select all textareas within the form
+            const answerElements = allQuestionsForm.querySelectorAll('textarea');
+
+            answerElements.forEach(textarea => {
+                 const answerValue = textarea.value.trim();
+                 if (!answerValue) { // Basic validation: Check if empty
+                     allValid = false;
+                     // Highlight the empty field (optional)
+                     textarea.classList.add('is-invalid'); // Use class for styling invalid state
+                     // textarea.style.borderColor = '#dc3545'; // Direct style (alternative)
+                 } else {
+                     // Reset border color by removing the error class
+                     textarea.classList.remove('is-invalid');
+                     // textarea.style.borderColor = ''; // <-- KORRIGIERTE ZEILE (removes inline style)
+                 }
+                 // Store answer based on the original index stored in data attribute
+                 const index = parseInt(textarea.getAttribute('data-question-index'), 10);
+                 if (!isNaN(index)) {
+                    state.answers[index] = answerValue; // Place answer at correct index
+                 } else {
+                     console.error("Could not find index for textarea", textarea);
+                     allValid = false; // Treat as error if index is missing
+                 }
+            });
+
+            if (!allValid) {
+                showError("Bitte beantworten Sie alle Fragen. Die leeren Felder sind rot markiert.");
+                // Find first invalid textarea and scroll to it
+                const firstInvalid = allQuestionsForm.querySelector('textarea.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
+            if (state.questions.length !== state.answers.length) {
+                console.error("Mismatch between questions and collected answers count!", state.questions.length, state.answers.length);
+                showError("Fehler beim Sammeln der Antworten. Nicht alle Antworten konnten zugeordnet werden.");
+                return;
+            }
+
+            console.log("Collected Answers:", state.answers);
+            displaySummary();
+            showView('summary');
+        }
+
+
+        function displaySummary() {
+            summaryContent.innerHTML = '';
+            const list = document.createElement('ul');
+            if (state.questions.length === 0) {
+                 summaryContent.innerHTML = "<p>Keine Fragen wurden beantwortet.</p>";
+                 return;
+            }
+            state.questions.forEach((question, index) => {
+                const questionDisplayText = question.text || question.question || `Frage ${index + 1} (Text fehlt)`;
+                const answerText = state.answers[index] || '<em>Keine Antwort</em>'; // Should have answer due to validation
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<strong class="question-title">Frage ${index + 1}: ${questionDisplayText}</strong><span class="answer-text">${answerText}</span>`;
+                list.appendChild(listItem);
+            });
+            summaryContent.appendChild(list);
+        }
+
+        // --- handleGenerateDescription remains largely the same ---
+        async function handleGenerateDescription() {
+            hideError();
+             // Validation already happened in handleSubmitAllAnswers
+             if (state.questions.length === 0 || state.answers.length === 0 || state.questions.length !== state.answers.length) {
+                 showError("Ungültiger Zustand: Fragen und Antworten stimmen nicht überein.");
+                 return;
+            }
+
+            const requestBody = {
+                description: state.description,
+                procurement_type: state.procurementType,
+                questions: state.questions, // Send original question objects
+                answers: state.answers,     // Send collected answers
+            };
+             if (state.isAnonymous) {
+                 requestBody.is_anonymous = true; // Add flag if API needs it
+             }
+
+             const data = await makeApiCall('analysis/generate-description', 'POST', requestBody);
+
+             if (data) {
+                  let descriptionText = '';
+                  if (typeof data === 'string') { descriptionText = data; }
+                  else if (typeof data === 'object' && data.description) { descriptionText = data.description; }
+                  else if (typeof data === 'object') { // Try other common keys
+                      const possibleKeys = ['text', 'generated_description', 'content'];
+                      const foundKey = possibleKeys.find(key => typeof data[key] === 'string');
+                      if (foundKey) { descriptionText = data[foundKey]; }
+                       else { console.warn("Unexpected object format for description:", data); showError("Beschreibung konnte nicht aus der Server-Antwort extrahiert werden."); return; }
+                  } else { console.warn("Unexpected response format for description:", data); showError("Beschreibung konnte nicht extrahiert werden."); return; }
+
+                 state.generatedDescription = descriptionText.trim();
+                 descriptionContent.textContent = state.generatedDescription || "Die generierte Beschreibung ist leer.";
+                 showView('description');
+             } else { console.error("Failed to generate description."); }
+        }
+
+         // --- PDF Generation (Adjusted styles slightly) ---
+        function generatePdf(contentElementId, title, filename) {
+             hideError();
+             try {
+                // Ensure jsPDF is accessed correctly from the global scope
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const contentElement = document.getElementById(contentElementId);
+                 const baseFontSize = 10; // Slightly smaller base size
+                 const titleFontSize = 14;
+                 const lineSpacingFactor = 1.5; // Factor based on font size
+                 let yPosition = 15; // Initial Y position (in mm) with top margin
+                 const leftMargin = 15; // Left margin (in mm)
+                 const usableWidth = doc.internal.pageSize.getWidth() - (leftMargin * 2); // Usable width in mm
+
+                 // --- Title ---
+                 doc.setFontSize(titleFontSize);
+                 doc.setFont('helvetica', 'bold'); // Using helvetica
+                 const titleLines = doc.splitTextToSize(title, usableWidth);
+                 doc.text(titleLines, leftMargin, yPosition);
+                 yPosition += (titleLines.length * (titleFontSize * lineSpacingFactor / 2.5)) + 5; // Adjust spacing based on font size
+
+                 // --- Content ---
+                 doc.setFontSize(baseFontSize);
+                 doc.setFont('helvetica', 'normal');
+
+                 if (contentElementId === 'summary-content') {
+                    const summaryPrefix = `Ursprüngliche Beschreibung: ${state.description || 'N/A'}\nBeschaffungstyp: ${state.procurementType || 'N/A'}`;
+                    const prefixLines = doc.splitTextToSize(summaryPrefix, usableWidth);
+                    doc.text(prefixLines, leftMargin, yPosition);
+                    yPosition += (prefixLines.length * (baseFontSize * lineSpacingFactor / 2.5)) + 5;
+
+                    doc.setFont('helvetica', 'bold');
+                    const qaTitle = "--- Fragen & Antworten ---";
+                    const qaTitleLines = doc.splitTextToSize(qaTitle, usableWidth);
+                    doc.text(qaTitleLines, leftMargin, yPosition);
+                    yPosition += (qaTitleLines.length * (baseFontSize * lineSpacingFactor / 2.5));
+                    doc.setFont('helvetica', 'normal');
+
+
+                     if (state.questions.length > 0) {
+                        state.questions.forEach((question, index) => {
+                             // Check if adding this Q&A block would exceed the page height
+                             // Estimate height needed (rough calculation)
+                             const questionDisplayText = question.text || question.question || `Frage ${index + 1} (Text fehlt)`;
+                             const answerText = state.answers[index] || 'Keine Antwort';
+                             const qLinesEst = doc.splitTextToSize(`Frage ${index + 1}: ${questionDisplayText}`, usableWidth).length;
+                             const aLinesEst = doc.splitTextToSize(`Antwort: ${answerText}`, usableWidth - 5).length;
+                             const blockHeightEst = (qLinesEst + aLinesEst) * (baseFontSize * lineSpacingFactor / 2.5) + 4; // Estimated height + spacing
+
+                            if (yPosition + blockHeightEst > doc.internal.pageSize.getHeight() - 20) { // Check for page break before adding
+                                doc.addPage();
+                                yPosition = 15; // Reset Y position on new page
+                                 // Optional: Re-print Q&A title on new page
+                                 doc.setFontSize(baseFontSize); // Ensure font size is reset
+                                 doc.setFont('helvetica', 'bold');
+                                 doc.text(qaTitleLines, leftMargin, yPosition);
+                                 yPosition += (qaTitleLines.length * (baseFontSize * lineSpacingFactor / 2.5));
+                                 doc.setFont('helvetica', 'normal');
+                            }
+
+                             // Question Text (Bold)
+                             doc.setFont('helvetica', 'bold');
+                             const qLines = doc.splitTextToSize(`Frage ${index + 1}: ${questionDisplayText}`, usableWidth);
+                             doc.text(qLines, leftMargin, yPosition);
+                             yPosition += (qLines.length * (baseFontSize * lineSpacingFactor / 2.5));
+                             doc.setFont('helvetica', 'normal'); // Reset font style
+
+                             // Answer Text
+                             const aLines = doc.splitTextToSize(`Antwort: ${answerText}`, usableWidth - 5); // Slightly smaller width for indent
+                             doc.text(aLines, leftMargin + 5, yPosition); // Indent answer
+                             yPosition += (aLines.length * (baseFontSize * lineSpacingFactor / 2.5)) + 4; // Extra spacing after answer
+                        });
+                     } else { doc.text("Keine Fragen beantwortet.", leftMargin, yPosition); }
+
+                 } else if (contentElementId === 'description-content') {
+                     const descriptionText = contentElement.textContent || contentElement.innerText || "Keine Beschreibung vorhanden.";
+                     const descLines = doc.splitTextToSize(descriptionText, usableWidth);
+                     // Add text line by line to handle page breaks within the description
+                     descLines.forEach(line => {
+                         if (yPosition > doc.internal.pageSize.getHeight() - 20) {
+                             doc.addPage();
+                             yPosition = 15; // Reset Y on new page
+                         }
+                         doc.text(line, leftMargin, yPosition);
+                         yPosition += (baseFontSize * lineSpacingFactor / 2.5);
+                     });
+                 }
+
+                doc.save(filename);
+             } catch (error) { console.error("Fehler bei der PDF-Generierung:", error); showError(`PDF konnte nicht generiert werden: ${error.message}`); }
+        }
+
+        // --- Event Listeners ---
+        loginForm.addEventListener('submit', handleLogin);
+        anonLoginBtn.addEventListener('click', handleAnonLogin);
+        initialInputForm.addEventListener('submit', handleStartAnalysis);
+        submitAllAnswersBtn.addEventListener('click', handleSubmitAllAnswers); // Changed Button ID and handler
+        generateDescriptionBtn.addEventListener('click', handleGenerateDescription);
+        downloadSummaryPdfBtn.addEventListener('click', () => generatePdf('summary-content', 'Zusammenfassung Bedarfsanalyse', 'zusammenfassung_vergabebausteine.pdf'));
+        downloadDescriptionPdfBtn.addEventListener('click', () => generatePdf('description-content', 'Generierte Bedarfsbeschreibung', 'beschreibung_vergabebausteine.pdf'));
+        restartBtnSummary.addEventListener('click', restartApp);
+        restartBtnDescription.addEventListener('click', restartApp);
+
+        // --- Initial Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            showView('login');
+        });
+
+    </script>
+</body>
+</html>
